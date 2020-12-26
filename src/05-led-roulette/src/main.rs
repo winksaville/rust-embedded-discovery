@@ -67,6 +67,7 @@
 //   Total               81547
 
 use aux5::{entry, prelude::*, Delay, Leds};
+
 struct LedState {
     cnt: u8,
     idx: usize,
@@ -109,7 +110,7 @@ impl LedState {
 fn main() -> ! {
     let (mut delay, mut leds): (Delay, Leds) = aux5::init();
 
-    let period = 50_u16;
+    let period = 50_u8;
 
     const COUNTS: u8 = 3;
 
@@ -157,7 +158,42 @@ fn main() -> ! {
 //   .comment               19         0x0
 //   Total              100338
 
+// Adding fn delay_ms and never inlining reduces
+// the size significanlty and now .text is 4
+// bytes larger and .rodata is 32 bytes larger
+// than "Wink's Solution".
+//
+//   $ cargo size --bin led-roulette --release -- -A
+//      Compiling led-roulette v0.1.0 (/home/wink/prgs/rust/tutorial/embedded-discovery/src/05-led-roulette)
+//       Finished release [optimized + debuginfo] target(s) in 0.58s
+//   led-roulette  :
+//   section              size        addr
+//   .vector_table         392   0x8000000
+//   .text                 880   0x8000188
+//   .rodata                76   0x80004f8
+//   .data                   0  0x20000000
+//   .bss                    4  0x20000000
+//   .uninit                 0  0x20000004
+//   .debug_loc           4671         0x0
+//   .debug_abbrev        1326         0x0
+//   .debug_info         29355         0x0
+//   .debug_aranges        288         0x0
+//   .debug_ranges         464         0x0
+//   .debug_str          20921         0x0
+//   .debug_pubnames      6382         0x0
+//   .debug_pubtypes      7521         0x0
+//   .ARM.attributes        58         0x0
+//   .debug_frame          328         0x0
+//   .debug_line          9115         0x0
+//   .comment               19         0x0
+//   Total               81800
+
 //use aux5::{entry, prelude::*, Delay, Leds};
+//
+//#[inline(never)]
+//fn delay_ms(delay: &mut Delay, ms: u8) {
+//    delay.delay_ms(ms);
+//}
 //
 //#[entry]
 //fn main() -> ! {
@@ -169,9 +205,9 @@ fn main() -> ! {
 //            let next = (curr + 1) % 8;
 //
 //            leds[next].on();
-//            delay.delay_ms(ms);
+//            delay_ms(&mut delay, ms);
 //            leds[curr].off();
-//            delay.delay_ms(ms);
+//            delay_ms(&mut delay, ms);
 //        }
 //    }
 //}
