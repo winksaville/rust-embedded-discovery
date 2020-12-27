@@ -30,7 +30,25 @@
 //    loop {}
 //}
  
-// 0xBAAAAAAD address
+//// 0xBAAAAAAD address
+//use core::ptr;
+//
+//#[allow(unused_imports)]
+//use aux7::{entry, iprint, iprintln};
+//
+//#[entry]
+//fn main() -> ! {
+//    aux7::init();
+//
+//    unsafe {
+//        ptr::read_volatile(0x4800_1800 as *const u32);
+//    }
+//
+//    loop {}
+//}
+
+// Spooky action at a distance, using GPIO_ODR
+
 use core::ptr;
 
 #[allow(unused_imports)]
@@ -38,10 +56,47 @@ use aux7::{entry, iprint, iprintln};
 
 #[entry]
 fn main() -> ! {
-    aux7::init();
+    let mut itm = aux7::init().0;
 
     unsafe {
-        ptr::read_volatile(0x4800_1800 as *const u32);
+        const GPIOE_BSRR: u32 = 0x4800_1018;
+        const GPIOE_ODR: u32 = 0x4800_1014;
+
+        iprintln!(
+            &mut itm.stim[0],
+            "ODR = 0x{:04x}",
+            ptr::read_volatile(GPIOE_ODR as *const u16)
+        );
+
+        // Turn on the NORTH LED (red)
+        ptr::write_volatile(GPIOE_BSRR as *mut u32, 1 << 9);
+
+        iprintln!(
+            &mut itm.stim[0],
+            "ODR = 0x{:04x}",
+            ptr::read_volatile(GPIOE_ODR as *const u16)
+        );
+
+        // Turn on the EAST LED (green)
+        ptr::write_volatile(GPIOE_BSRR as *mut u32, 1 << 11);
+
+        iprintln!(
+            &mut itm.stim[0],
+            "ODR = 0x{:04x}",
+            ptr::read_volatile(GPIOE_ODR as *const u16)
+        );
+
+        // Turn off the NORTH LED
+        ptr::write_volatile(GPIOE_BSRR as *mut u32, 1 << (9 + 16));
+
+        iprintln!(
+            &mut itm.stim[0],
+            "ODR = 0x{:04x}",
+            ptr::read_volatile(GPIOE_ODR as *const u16)
+        );
+
+        // Turn off the EAST LED
+        ptr::write_volatile(GPIOE_BSRR as *mut u32, 1 << (11 + 16));
     }
 
     loop {}
