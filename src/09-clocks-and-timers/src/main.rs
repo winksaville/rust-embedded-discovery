@@ -8,45 +8,42 @@ use aux9::iprintln;
 use aux9::{entry, tim6, ITM};
 
 #[inline(never)]
-fn delay(_itm: &mut ITM, _tim6: &tim6::RegisterBlock, ms: u16) {
-    let v = 3;
-    match v {
-        1 => {
-            //iprintln!(&mut _itm.stim[0], "delay v={}", v);
-            const TPMS: u32 = 5_000u32;
-            let count: u32 = (ms as u32) * TPMS;
-            let p_count = &count as *const u32;
-            for _ in 0..count {
-                unsafe { let _ = ptr::read_volatile(p_count); }
-            }
-        }
-        2 => {
-            //iprintln!(&mut _itm.stim[0], "delay v=2");
-            const TPMS: u32 = 1_000u32;
-            let count: u32 = (ms as u32) * TPMS;
-            for _ in 0..count {
-                aux9::nop();
-            }
-        }
-        3 => {
-            //iprintln!(&mut _itm.stim[0], "delay v=3");
-            const TPMS: u32 = 1_000u32;
-            let count: u32 = (ms as u32) * TPMS;
-            for _ in 0..count {
-                unsafe{
-                    asm!("nop");
-                }
-            }
-        }
-        _ => panic!("Unknown delay variant v={}", v)
-    }
+fn delay(_itm: &mut ITM, tim6: &tim6::RegisterBlock, ms: u16) {
+    // Write the the number of millisecs we want to wait
+    tim6.arr.write(|w| w.arr().bits(ms));
+
+    // Enable the counter
+    tim6.cr1.modify(|_, w| w.cen().set_bit());
+
+    // Wait until the update interrupt flag is set
+    // i.e. until the timer fires
+    while !tim6.sr.read().uif().bit_is_set() {}
+
+    // Clear the uif
+    tim6.sr.modify(|_, w| w.uif().clear_bit());
 }
 
 #[entry]
 fn main() -> ! {
-    let (mut leds, mut itm, _rcc, tim6) = aux9::init();
+    let (mut leds, mut itm, rcc, tim6) = aux9::init();
 
-    // TODO initialize TIM6
+    // Initialize TIM6
+
+    // Power on TIM6 by enableing it
+    rcc.apb1enr.modify(|_, w| w.tim6en().set_bit());
+
+    // In CR1 register enable the One Pluse Mode (opm)
+    // and clear Counter ENable (cen) to disable counter
+    tim6.cr1.write(|w| w.opm().set_bit().cen().clear_bit());
+
+    // Initialize TIM6 prescale assuming:
+    //   counter_freq = abp1_freq / (prescale_value + 1)
+    // Solve for prescale_value:
+    //   prescale_value = (apb1_freg / counter_freq) - 1
+    let apb1_freq = 8_000_000;
+    let counter_freq = 1_000;
+    let prescale_value: u16 = ((apb1_freq / counter_freq) - 1) as u16;
+    tim6.psc.write(|w| w.psc().bits(prescale_value));
 
     let ms = 50;
     loop {
