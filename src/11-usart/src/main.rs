@@ -62,6 +62,13 @@ fn ws(usart: &mut usart1::RegisterBlock, s: &str) -> Result<(), &'static str> {
     Ok(())
 }
 
+fn rb(usart: &mut usart1::RegisterBlock) -> u8 {
+    // Wait for a character
+    while usart.isr.read().rxne().bit_is_clear() {};
+
+    usart.rdr.read().rdr().bits() as u8
+}
+
 #[entry]
 #[allow(unused_variables)]
 fn main() -> ! {
@@ -81,6 +88,10 @@ fn main() -> ! {
         elapsed,
         ((elapsed as f32) / (mono_timer.frequency().0 as f32)) * 1e6
     );
+
+    // Read a byte from serial port and output to debug port
+    let b = rb(serial.usart1);
+    iprintln!(&mut serial.itm.stim[0], "b={}", b);
 
     loop {}
 }
