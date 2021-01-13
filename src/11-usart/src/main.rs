@@ -29,7 +29,7 @@ fn ws(usart: &mut RegisterBlock, s: &str) -> Result<(), &'static str> {
 #[allow(unused_variables)]
 fn main() -> ! {
     let (usart1, mono_timer, mut itm) = aux11::init();
-    //iprintln!(&mut itm.stim[0], "Hi");
+    iprintln!(&mut itm.stim[0], "Hi");
 
     let start = mono_timer.now();
     // Send a single character
@@ -37,12 +37,12 @@ fn main() -> ! {
     let elapsed = start.elapsed();
 
 
-    //iprintln!(
-    //    &mut itm.stim[0],
-    //    "ws took {} ticks ({} us)",
-    //    elapsed,
-    //    ((elapsed as f32) / (mono_timer.frequency().0 as f32)) * 1e6
-    //);
+    iprintln!(
+        &mut itm.stim[0],
+        "ws took {} ticks ({} us)",
+        elapsed,
+        ((elapsed as f32) / (mono_timer.frequency().0 as f32)) * 1e6
+    );
 
     loop {}
 }
