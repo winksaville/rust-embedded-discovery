@@ -89,9 +89,9 @@ fn main() -> ! {
         ((elapsed as f32) / (mono_timer.frequency().0 as f32)) * 1e6
     );
 
-    // Read a byte from serial port and output to debug port
-    let b = rb(serial.usart1);
-    iprintln!(&mut serial.itm.stim[0], "b={}", b);
-
-    loop {}
+    // A byte echo server
+    loop {
+        let b = rb(serial.usart1);
+        let _ = wc(serial.usart1, b as char);
+    }
 }
