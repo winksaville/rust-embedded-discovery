@@ -6,6 +6,9 @@
 use aux11::{entry, iprint, iprintln, usart1::RegisterBlock};
 
 fn wc(usart: &mut RegisterBlock, ch: char) -> Result<(), &'static str> {
+    // Wait for Transmit buffer Empty (TXE)
+    while usart.isr.read().txe().bit_is_clear() {}
+
     // Send a single character
     unsafe {
         usart.tdr.write(|w| w.tdr().bits(ch as u16));
