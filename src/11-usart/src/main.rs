@@ -3,9 +3,9 @@
 #![no_std]
 
 #[allow(unused_imports)]
-use aux11::{entry, iprint, iprintln, usart1::RegisterBlock};
+use aux11::{entry, iprint, iprintln, usart1};
 
-fn wc(usart: &mut RegisterBlock, ch: char) -> Result<(), &'static str> {
+fn wc(usart: &mut usart1::RegisterBlock, ch: char) -> Result<(), &'static str> {
     // Wait for Transmit buffer Empty (TXE)
     while usart.isr.read().txe().bit_is_clear() {}
 
@@ -17,7 +17,7 @@ fn wc(usart: &mut RegisterBlock, ch: char) -> Result<(), &'static str> {
     Ok(())
 }
 
-fn ws(usart: &mut RegisterBlock, s: &str) -> Result<(), &'static str> {
+fn ws(usart: &mut usart1::RegisterBlock, s: &str) -> Result<(), &'static str> {
     for ch in s.chars() {
         match wc(usart, ch) {
             Ok(a) => a,
