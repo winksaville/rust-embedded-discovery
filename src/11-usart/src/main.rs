@@ -39,7 +39,7 @@ impl fmt::Write for SerialPort {
 }
 
 
-fn wc(usart: &mut usart1::RegisterBlock, ch: char) -> Result<(), &'static str> {
+fn wc(usart: &mut usart1::RegisterBlock, ch: char) {
     // Wait for Transmit buffer Empty (TXE)
     while usart.isr.read().txe().bit_is_clear() {}
 
@@ -47,19 +47,12 @@ fn wc(usart: &mut usart1::RegisterBlock, ch: char) -> Result<(), &'static str> {
     unsafe {
         usart.tdr.write(|w| w.tdr().bits(ch as u16));
     }
-
-    Ok(())
 }
 
-fn ws(usart: &mut usart1::RegisterBlock, s: &str) -> Result<(), &'static str> {
+fn ws(usart: &mut usart1::RegisterBlock, s: &str) {
     for ch in s.chars() {
-        match wc(usart, ch) {
-            Ok(a) => a,
-            Err(e) => return Err(e),
-        }
+        wc(usart, ch);
     }
-
-    Ok(())
 }
 
 fn rb(usart: &mut usart1::RegisterBlock) -> u8 {
