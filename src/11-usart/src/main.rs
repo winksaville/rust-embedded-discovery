@@ -6,6 +6,7 @@ use core::fmt::{self, Write};
 
 #[allow(unused_imports)]
 use aux11::{entry, iprint, iprintln, usart1, ITM};
+use heapless::{consts, Vec};
 
 macro_rules! uprint {
     ($serial:expr, $($arg:tt)*) => {
@@ -15,7 +16,7 @@ macro_rules! uprint {
 
 macro_rules! uprintln {
     // For somereason my minicom needs "\r" for EOL
-    // and you need "linefeed ON". Use (Ctrl-A a)
+    // so you need "linefeed ON" in minicom. Use (Ctrl-A a)
     ($serial:expr, $fmt:expr) => {
         uprint!($serial, concat!($fmt, "\r"))
     };
@@ -32,12 +33,11 @@ struct SerialPort {
 
 impl fmt::Write for SerialPort {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        //iprintln!("write_str: s={}", s);
+        //iprintln!("write_str: s={}", s);0
         let _ = ws(self.usart1, s);
         Ok(())
     }
 }
-
 
 fn wc(usart: &mut usart1::RegisterBlock, ch: char) {
     // Wait for Transmit buffer Empty (TXE)
@@ -57,9 +57,34 @@ fn ws(usart: &mut usart1::RegisterBlock, s: &str) {
 
 fn rb(usart: &mut usart1::RegisterBlock) -> u8 {
     // Wait for a character
-    while usart.isr.read().rxne().bit_is_clear() {};
+    while usart.isr.read().rxne().bit_is_clear() {}
 
     usart.rdr.read().rdr().bits() as u8
+}
+
+fn readline(usart: &mut usart1::RegisterBlock, buffer: &mut Vec<u8, consts::U8>) {
+    for _ in 0..buffer.capacity() {
+        let b = rb(usart);
+        let _ = wc(usart, b as char);
+        if b == b'\r' {
+            return;
+        }
+        let _ = buffer.push(b);
+    }
+}
+
+fn reverse(buffer: &mut Vec<u8, consts::U8>) {
+    if buffer.len() == 0 {
+        return;
+    }
+
+    let last_idx = buffer.len() - 1;
+    let mid = buffer.len() / 2;
+    for i in 0..mid {
+        let tmp: u8 = buffer[last_idx - i];
+        buffer[last_idx - i] = buffer[i];
+        buffer[i] = tmp;
+    }
 }
 
 #[entry]
@@ -74,7 +99,6 @@ fn main() -> ! {
     uprintln!(serial, "hello, world!");
     let elapsed = start.elapsed();
 
-
     iprintln!(
         &mut serial.itm.stim[0],
         "ws took {} ticks ({} us)",
@@ -82,9 +106,19 @@ fn main() -> ! {
         ((elapsed as f32) / (mono_timer.frequency().0 as f32)) * 1e6
     );
 
-    // A byte echo server
+    //// A byte echo server
+    //loop {
+    //    let b = rb(serial.usart1);
+    //    let _ = wc(serial.usart1, b as char);
+    //}
+
+    // Line by line
+    let mut buffer: Vec<u8, consts::U8> = Vec::new();
     loop {
-        let b = rb(serial.usart1);
-        let _ = wc(serial.usart1, b as char);
+        buffer.clear();
+        readline(serial.usart1, &mut buffer);
+        uprintln!(serial, "buffer={:?}", buffer);
+        reverse(&mut buffer);
+        uprintln!(serial, "buffer={:?}", buffer);
     }
 }
