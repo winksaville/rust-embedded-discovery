@@ -2,10 +2,10 @@ set -euxo pipefail
 
 main() {
     # test that building the book works
-    mdbook build
+    time RUST_LOG=error,warn,info,debug mdbook build
 
     # mdbook doesn't handle relative links correctly in print.html so skip it.
-    linkchecker --ignore-url "print.html" book
+    time RUST_LOG=error,warn,info,debug linkchecker --ignore-url "print.html" book
 
     # now check this as a directory of the bookshelf
     rm -rf shelf
